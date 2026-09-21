@@ -1,11 +1,22 @@
 from CD4051 import Cd4051
 import time
 
-mux = Cd4051(pin_a=2, pin_b=3, pin_c=4, adc_pin=28)
+# mux = Cd4051(pin_a=2, pin_b=3, pin_c=4, adc_pin=28)
+mux = Cd4051(pin_a=19, pin_b=20, pin_c=21, adc_pin=27)
 
 sample_period_ms = 100
 channel_period_ms = 1000
 channel = 0
+
+# channel_mixer
+# connector0: ch0
+# connector1: ch4
+# connector2: ch2
+# connector3: ch6
+# connector4: ch1
+# connector5: ch5
+# connector6: ch3
+# connector7: ch7
 
 last_sample = time.ticks_ms()
 last_channel_change = time.ticks_ms()
