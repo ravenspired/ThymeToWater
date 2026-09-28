@@ -1,7 +1,7 @@
 from CD4051 import Cd4051
 import time
 
-# mux = Cd4051(pin_a=2, pin_b=3, pin_c=4, adc_pin=28)
+#mux = Cd4051(pin_a=2, pin_b=3, pin_c=4, adc_pin=28)
 mux = Cd4051(pin_a=19, pin_b=20, pin_c=21, adc_pin=27)
 
 sample_period_ms = 100
