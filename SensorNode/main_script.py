@@ -171,24 +171,56 @@ def collect_data():
 
 # ---------------- WiFi ----------------
 def load_wifi():
+    """Returns (ssid, password, static) where static is a dict or None (DHCP)."""
     try:
         with open(WIFI_FILE) as f:
             d = json.load(f)
-        return d["ssid"], d["password"]
+        return d["ssid"], d["password"], d.get("static")
     except (OSError, ValueError, KeyError):
         return None
+
+
+def _valid_ip(s):
+    p = s.split(".")
+    try:
+        return len(p) == 4 and all(0 <= int(x) <= 255 for x in p)
+    except ValueError:
+        return False
+
+
+def _ask_ip(label, default=None):
+    """Prompt until a valid IPv4 address is entered (Enter accepts default)."""
+    while True:
+        v = input("{} [{}]: ".format(label, default)).strip() or default
+        if v and _valid_ip(v):
+            return v
+        print("Invalid IPv4 address")
 
 
 def prompt_wifi():
     ssid = input("WiFi SSID: ").strip()
     password = input("WiFi password: ").strip()
+
+    static = None
+    while True:
+        ip = input("Static IP (blank = DHCP): ").strip()
+        if not ip or _valid_ip(ip):
+            break
+        print("Invalid IPv4 address")
+    if ip:
+        gw_default = ip.rsplit(".", 1)[0] + ".1"
+        mask = _ask_ip("Subnet mask", "255.255.255.0")
+        gw = _ask_ip("Gateway", gw_default)
+        dns = _ask_ip("DNS", gw)
+        static = {"ip": ip, "mask": mask, "gw": gw, "dns": dns}
+
     with open(WIFI_FILE, "w") as f:
-        json.dump({"ssid": ssid, "password": password}, f)
+        json.dump({"ssid": ssid, "password": password, "static": static}, f)
     print("Saved to", WIFI_FILE)
-    return ssid, password
+    return ssid, password, static
 
 
-def wifi_connect(ssid, password, timeout_s=20):
+def wifi_connect(ssid, password, static=None, timeout_s=20):
     wlan.active(True)
     try:
         wlan.config(pm=network.WLAN.PM_NONE)  # no power save: more reliable server
@@ -204,6 +236,8 @@ def wifi_connect(ssid, password, timeout_s=20):
         if time.ticks_diff(time.ticks_ms(), t0) > timeout_s * 1000:
             break
         time.sleep_ms(250)
+    if wlan.isconnected() and static:
+        wlan.ifconfig((static["ip"], static["mask"], static["gw"], static["dns"]))
     return wlan.isconnected()
 
 
@@ -251,7 +285,7 @@ def handle(conn):
 
 def main():
     creds = load_wifi() or prompt_wifi()
-    ssid, password = creds
+    ssid, password, static = creds
     srv = None
     delay = 2
     STATS["wifi_connects"] += 1
@@ -262,7 +296,7 @@ def main():
                 srv.close()
                 srv = None
             print("WiFi down - connecting to '{}'...".format(ssid))
-            if not wifi_connect(ssid, password):
+            if not wifi_connect(ssid, password, static):
                 print("Connect failed, retrying in {}s".format(delay))
                 time.sleep(delay)
                 delay = min(delay * 2, 30)
