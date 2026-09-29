@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en" data-theme="day">
+<head>
+<meta charset="utf-8">
+<title>Plant shelf</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+:root{font-family:"SF Pro Rounded",ui-rounded,"Avenir Next","Segoe UI",system-ui,sans-serif}
+html[data-theme=day]{--bg:#e8eddf;--panel:#f7f8f1;--tile:#ebf0e2;--tube:#d8e0cd;--ink:#1c2a20;--mut:#66746a;--line:#d2dbc7;--accent:#2e7d50;--water:#2a7fb8;--dry:#c77d1f;--low:#8f9e28;--good:#2e9a5b;--wet:#6a5fc9;--wood:#c19a6b;--btn:#e2e8d6;--shade:rgba(30,50,30,.35)}
+html[data-theme=night]{--bg:#0a1210;--panel:#121d18;--tile:#1a2822;--tube:#0c1512;--ink:#e6efe4;--mut:#8a9c8f;--line:#243530;--accent:#6fd08c;--water:#5db0e6;--dry:#e5a24a;--low:#c6cf4f;--good:#5fd18a;--wet:#a198f3;--wood:#6a5238;--btn:#1f2f28;--shade:rgba(0,0,0,.6)}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{display:flex;flex-direction:column;background:var(--bg);color:var(--ink);transition:background-color .5s,color .5s;overflow:hidden;-webkit-user-select:none;user-select:none}
+button,input,select{font:inherit;color:inherit}
+h1,h2,h3,p{margin:0}
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 24px;height:80px;flex:none}
+.brand{display:flex;align-items:center;gap:12px;min-width:220px}
+.brand .mark{width:30px;height:30px;border-radius:50% 50% 50% 8%;background:var(--accent);transform:rotate(-20deg)}
+.brand h1{font-size:22px;font-weight:650}
+.clock{text-align:center}
+#time{font-size:38px;font-weight:650;font-variant-numeric:tabular-nums;line-height:1}
+#date{font-size:14px;color:var(--mut);margin-top:4px}
+.tools{display:flex;align-items:center;gap:10px;min-width:220px;justify-content:flex-end}
+.btn{border:0;background:var(--btn);padding:10px 16px;border-radius:12px;cursor:pointer;font-weight:600;font-size:15px;transition:filter .15s}
+.btn:hover{filter:brightness(.95)}.btn.primary{background:var(--accent);color:var(--bg)}
+.btn.danger{background:transparent;color:var(--dry);box-shadow:inset 0 0 0 1.5px var(--dry)}
+.btn.icon{padding:10px 13px}
+.seg{display:inline-flex;background:var(--btn);border-radius:12px;padding:3px}
+.seg button{border:0;background:transparent;padding:7px 13px;border-radius:9px;cursor:pointer;font-weight:600;font-size:14px;color:var(--mut)}
+.seg button.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px var(--shade)}
+main{flex:1;min-height:0;padding:0 24px 24px}
+.dash{display:grid;grid-template-columns:1fr 300px;gap:20px;height:100%}
+.shelves{display:flex;flex-direction:column;gap:18px;overflow:auto;min-height:0;padding-right:2px}
+.shelf{flex:1 0 auto;background:var(--panel);border-radius:22px;padding:18px 20px 0;display:flex;flex-direction:column;transition:background-color .5s}
+.shead{display:flex;align-items:baseline;gap:12px;margin-bottom:14px}
+.shead h2{font-size:18px;font-weight:650}.shead span{color:var(--mut);font-size:14px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;flex:1;align-content:start;padding-bottom:14px}
+.plank{height:12px;margin:0 -20px;background:var(--wood);border-radius:0 0 22px 22px;transition:background-color .5s}
+.none{color:var(--mut);font-size:14px;padding:10px 0}
+.tile{--c:var(--mut);display:flex;gap:14px;align-items:stretch;text-align:left;border:0;background:var(--tile);padding:14px;border-radius:16px;cursor:pointer;min-width:0;transition:background-color .5s,opacity .3s}
+.tile[data-st=dry]{--c:var(--dry)}.tile[data-st=low]{--c:var(--low)}.tile[data-st=good]{--c:var(--good)}.tile[data-st=wet]{--c:var(--wet)}
+.tile.stale{opacity:.5}
+.tube{position:relative;width:26px;min-height:104px;border-radius:13px;background:var(--tube);overflow:hidden;flex:none}
+.fill{position:absolute;left:0;right:0;bottom:0;background:var(--c);transition:height .8s ease,background-color .5s}
+.tick{position:absolute;left:0;right:0;bottom:80%;height:2px;background:var(--ink);opacity:.55}
+.info{display:flex;flex-direction:column;min-width:0;justify-content:space-between}
+.name{font-size:15px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pct{font-size:44px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+.pct small{font-size:20px;font-weight:600;color:var(--mut);margin-left:1px}
+.stat{font-size:13px;font-weight:650;color:var(--c)}.sens{font-size:12px;color:var(--mut)}
+.side{display:flex;flex-direction:column;gap:16px;min-height:0;overflow:auto}
+.card{background:var(--panel);border-radius:22px;padding:20px;border:0;text-align:left;width:100%;transition:background-color .5s}
+.cl{font-size:15px;font-weight:650;color:var(--mut)}
+.temp{font-size:64px;font-weight:700;line-height:1.05;margin-top:6px;font-variant-numeric:tabular-nums}
+.temp small,.hv small{font-size:26px;color:var(--mut);font-weight:600}
+.sub{font-size:14px;color:var(--mut)}
+.hum{margin:14px 0 10px}.hl{font-size:15px;font-weight:650;color:var(--mut)}
+.hv{font-size:44px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.bar{height:8px;border-radius:4px;background:var(--tube);margin-top:8px;overflow:hidden}.bar i{display:block;height:100%;background:var(--water);transition:width .8s}
+.node{cursor:pointer;color:inherit}
+.nh{display:flex;align-items:center;gap:10px;margin-bottom:12px}.nh b{font-size:17px}.nh span:last-child{margin-left:auto;font-size:13px;color:var(--mut)}
+.dot{width:11px;height:11px;border-radius:50%;background:var(--mut);flex:none}.dot.on{background:var(--good)}.dot.bad{background:var(--dry)}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:14px}dt{color:var(--mut)}dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.hint{margin-top:12px;font-size:13px;color:var(--accent);font-weight:600}.err{color:var(--dry);font-size:13px;margin-top:8px;min-height:1em}
+.empty{margin:auto;text-align:center;max-width:420px;padding:40px}.empty h2{font-size:26px;margin-bottom:10px}.empty p{color:var(--mut);margin-bottom:20px;line-height:1.5}
+#adv{height:100%;overflow:auto}
+.advbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.advbar h2{font-size:22px}
+#adv h3{font-size:16px;color:var(--mut);margin:18px 0 10px}
+.cgrid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.cgrid2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.cc{background:var(--panel);border-radius:18px;padding:14px 14px 8px;cursor:pointer;transition:background-color .5s}
+.modal .cc{background:var(--tile);cursor:default}
+.cch{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}.cch b{font-size:15px}.cch span{font-size:14px;color:var(--mut);font-variant-numeric:tabular-nums}
+.nodata{height:150px;display:grid;place-items:center;color:var(--mut);font-size:14px}
+svg.ch{width:100%;height:auto;display:block;touch-action:pan-y}
+.gl{stroke:var(--line);stroke-width:1}.ax{fill:var(--mut);font-size:11px}.ln{fill:none;stroke:var(--water);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
+.ar{fill:var(--water);opacity:.12}.gd{stroke:var(--good);stroke-width:1.2;stroke-dasharray:5 4}.cross{stroke:var(--ink);stroke-width:1;opacity:.5;display:none}
+#tip{position:fixed;z-index:60;pointer-events:none;background:var(--ink);color:var(--bg);padding:5px 9px;border-radius:8px;font-size:12px;display:none;white-space:nowrap}
+.modal{position:fixed;inset:0;background:var(--shade);display:grid;place-items:center;z-index:40;backdrop-filter:blur(3px)}
+.sheet{background:var(--panel);width:min(960px,94vw);max-height:92vh;overflow:auto;border-radius:24px;padding:24px;-webkit-user-select:text;user-select:text}
+.mh{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}.mh h2{font-size:24px}.mr{display:flex;gap:10px;align-items:center}
+.big{font-size:34px;font-weight:700;font-variant-numeric:tabular-nums;margin-right:8px}
+.form{display:flex;flex-direction:column;gap:14px;max-width:520px}.form label{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600;color:var(--mut)}
+.form input,.form select{background:var(--tile);border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;font-size:16px;color:var(--ink);width:100%;-webkit-user-select:text;user-select:text}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.inl{display:flex;gap:8px}.calib{display:flex;flex-direction:column;gap:12px;background:var(--tile);border-radius:14px;padding:14px}
+.calib .lv{font-size:14px;color:var(--mut)}.calib .lv b{color:var(--ink);font-variant-numeric:tabular-nums}.calib input{background:var(--panel)}
+.actions{display:flex;gap:10px;align-items:center;margin-top:6px}.sp{flex:1}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}.facts div{background:var(--tile);border-radius:12px;padding:10px 12px;font-size:13px;color:var(--mut)}.facts b{display:block;color:var(--ink);font-size:16px;margin-top:2px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="mark"></span><h1>Plant shelf</h1></div>
+  <div class="clock"><div id="time">--:--:--</div><div id="date"></div></div>
+  <div class="tools">
+    <div class="seg" id="modeSeg"><button data-m="auto">Auto</button><button data-m="day">Day</button><button data-m="night">Night</button></div>
+    <button class="btn" id="advBtn">Advanced</button>
+    <button class="btn primary" id="addBtn">Add plant</button>
+    <button class="btn icon" id="setBtn" title="Node connection">&#9881;</button>
+  </div>
+</header>
+<main>
+  <section class="dash" id="dash"><div class="shelves" id="shelves"></div><aside class="side" id="side"></aside></section>
+  <section id="adv" hidden></section>
+</main>
+<div class="modal" id="modal" hidden><div class="sheet" id="sheet"></div></div>
+<div id="tip"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const RS={'1h':3600,'24h':86400,'7d':604800,'30d':2592000},RN={'1h':'Hour','24h':'Day','7d':'Week','30d':'Month'};
+let S=null,MODE=localStorage.mode||'auto',RANGE=localStorage.range||'24h',ADV=localStorage.adv==='1',MC=null,mTimer=null,advTimer=null;
+
+/* ---------- theme + clock ---------- */
+function applyTheme(){
+  const h=new Date().getHours(),t=MODE==='auto'?(h>=7&&h<19?'day':'night'):MODE;
+  if(document.documentElement.dataset.theme!==t)document.documentElement.dataset.theme=t;
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.m===MODE));
+}
+function clock(){
+  const d=new Date();
+  $('#time').textContent=d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',second:'2-digit'});
+  $('#date').textContent=d.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});
+  applyTheme();
+}
+
+/* ---------- helpers ---------- */
+const pctOf=(raw,p)=>(raw==null||p.adc80===p.adc20)?null:Math.max(0,Math.min(100,20+(raw-p.adc20)*60/(p.adc80-p.adc20)));
+const stOf=p=>p==null?'none':p<30?'dry':p<65?'low':p<=92?'good':'wet';
+const STX={dry:'Dry',low:'Getting dry',good:'Good',wet:'Too wet',none:'No reading'};
+const F=c=>c*9/5+32;
+const fmt=v=>Math.abs(v)>=1000?v.toFixed(0):v.toFixed(1);
+const fmtUp=s=>{s=Math.floor(s);const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);return d?`${d}d ${h}h`:h?`${h}h ${m}m`:`${m}m ${s%60}s`};
+const fmtAge=s=>s<60?`${Math.floor(s)}s ago`:s<3600?`${Math.floor(s/60)}m ago`:`${Math.floor(s/3600)}h ago`;
+const shelfName=s=>s==='top'?'Top shelf':'Lower shelf';
+
+/* ---------- live state ---------- */
+let busy=false;
+async function tick(){
+  if(busy)return;busy=true;
+  try{S=await(await fetch('/api/state')).json();S.srv=true}catch(e){if(S)S.srv=false}
+  busy=false;if(S)render();
+}
+function render(){renderShelves();renderSide();updateLive()}
+
+function tileHtml(p){return `<button class="tile" data-id="${p.id}"><div class="tube"><div class="fill"></div><i class="tick"></i></div><div class="info"><div class="name">${esc(p.name)}</div><div class="pct"><span class="pv">--</span><small>%</small></div><div><div class="stat"></div><div class="sens">Sensor ${esc(p.channel)}</div></div></div></button>`}
+
+function renderShelves(){
+  const host=$('#shelves'),P=S.plants;
+  const sig=JSON.stringify([!!S.node_url,P.map(p=>[p.id,p.name,p.shelf,p.pos,p.channel]),P.length?0:S.unassigned.length]);
+  if(sig!==host.dataset.sig){
+    host.dataset.sig=sig;
+    if(!S.node_url)host.innerHTML=`<div class="empty"><h2>Connect your sensor node</h2><p>Enter the address of the Pico that serves the moisture readings. Plants can be added once its sensors show up.</p><button class="btn primary" onclick="openNodeSettings()">Connect node</button></div>`;
+    else if(!P.length){const n=S.unassigned.length;host.innerHTML=`<div class="empty"><h2>No plants yet</h2><p>${n?`${n} sensors are reporting and waiting to be matched to a plant.`:'Waiting for the node to report its sensors.'}</p><button class="btn primary" onclick="plantForm()">Add your first plant</button></div>`}
+    else host.innerHTML=['top','lower'].map(sh=>{const L=P.filter(p=>p.shelf===sh);return `<div class="shelf"><div class="shead"><h2>${shelfName(sh)}</h2><span>${L.length} ${L.length==1?'plant':'plants'}</span></div><div class="tiles">${L.map(tileHtml).join('')||'<div class="none">Nothing on this shelf yet</div>'}</div><div class="plank"></div></div>`}).join('');
+  }
+  P.forEach(p=>{
+    const el=host.querySelector(`.tile[data-id="${p.id}"]`);if(!el)return;
+    const st=stOf(p.pct);el.dataset.st=st;el.classList.toggle('stale',!S.connected);
+    el.querySelector('.pv').textContent=p.pct==null?'--':Math.round(p.pct);
+    el.querySelector('.fill').style.height=(p.pct||0)+'%';
+    el.querySelector('.stat').textContent=STX[st];
+  });
+}
+
+function renderSide(){
+  const side=$('#side');
+  if(!side.dataset.built){side.dataset.built=1;side.innerHTML=`
+  <div class="card"><div class="cl">Room air</div>
+    <div class="temp"><span id="tF">--</span><small>&deg;F</small></div><div class="sub"><span id="tC">--</span> &deg;C</div>
+    <div class="hum"><div class="hl">Humidity</div><div class="hv"><span id="hum">--</span><small>%</small></div><div class="bar"><i id="humBar" style="width:0"></i></div></div>
+    <div class="sub">Dew point <span id="dew">--</span></div></div>
+  <button class="card node" id="nodeCard"><div class="nh"><span class="dot" id="dot"></span><b id="nid">Sensor node</b><span id="nstat"></span></div>
+    <dl><dt>Wi-Fi</dt><dd id="rssi">--</dd><dt>Uptime</dt><dd id="up">--</dd><dt>Last update</dt><dd id="age">--</dd><dt>Sensors</dt><dd id="chs">--</dd></dl>
+    <div class="err" id="nerr"></div><div class="hint">Tap for node telemetry</div></button>`}
+  const d=S.node||{},t=d.temperature_c,h=d.humidity_pct,dp=d.dew_point_c;
+  $('#tF').textContent=t==null?'--':F(t).toFixed(1);$('#tC').textContent=t==null?'--':t.toFixed(1);
+  $('#hum').textContent=h==null?'--':h.toFixed(1);$('#humBar').style.width=(h||0)+'%';
+  $('#dew').textContent=dp==null?'--':`${F(dp).toFixed(1)}\u00b0F`;
+  $('#dot').className='dot '+(!S.node_url?'':S.connected?'on':'bad');
+  $('#nstat').textContent=!S.node_url?'Not connected':S.connected?'Online':'Offline';
+  $('#nid').textContent=d.node_id||'Sensor node';
+  $('#rssi').textContent=d.wifi_rssi_dbm!=null?d.wifi_rssi_dbm+' dBm':'--';
+  $('#up').textContent=d.uptime_s!=null?fmtUp(d.uptime_s):'--';
+  $('#age').textContent=S.age_s!=null?fmtAge(S.age_s):'never';
+  $('#chs').textContent=d.channels?Object.keys(d.channels).length+' reporting':'--';
+  $('#nerr').textContent=S.srv===false?'Dashboard server unreachable':(!S.connected&&S.node_url&&S.error)||'';
+}
+
+function updateLive(){
+  const fc=$('#fCh'),lr=$('#liveRaw');
+  if(fc&&lr){const o=S.node&&S.node.channels&&S.node.channels[fc.value];lr.textContent=o?Math.round(o.raw):'--'}
+  if(MC&&MC.plant){const p=S.plants.find(x=>x.id===MC.plant),b=$('#mBig');if(p&&b)b.textContent=p.pct==null?'--':Math.round(p.pct)+'%'}
+  if(ADV)document.querySelectorAll('[data-live]').forEach(e=>{const p=S.plants.find(x=>x.id==e.dataset.live);e.textContent=p&&p.pct!=null?Math.round(p.pct)+'%':'--'});
+}
+
+/* ---------- charts ---------- */
+const tip=$('#tip');
+function drawChart(host,pts,o){
+  if(!pts.length){host.innerHTML='<div class="nodata">No data in this range yet</div>';return}
+  const W=640,H=190,L=46,R=10,T=10,B=24,now=Date.now()/1000,t0=now-o.span,t1=now;
+  const vs=pts.map(p=>p[1]);let lo=o.min!=null?o.min:Math.min(...vs),hi=o.max!=null?o.max:Math.max(...vs);
+  if(o.min==null||o.max==null){if(hi===lo){hi+=1;lo-=1}const pad=(hi-lo)*.1;if(o.min==null)lo-=pad;if(o.max==null)hi+=pad}
+  const x=t=>L+(t-t0)/(t1-t0)*(W-L-R),y=v=>T+(1-(v-lo)/(hi-lo))*(H-T-B);
+  const tf=t=>{const d=new Date(t*1000);return o.span<=86400?d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):d.toLocaleDateString([],{month:'short',day:'numeric'})};
+  let g='';
+  for(let i=0;i<=4;i++){const v=lo+(hi-lo)*i/4,yy=y(v);g+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}"/><text class="ax" x="${L-6}" y="${yy+4}" text-anchor="end">${fmt(v)}</text>`}
+  for(let i=0;i<=4;i++){const t=t0+(t1-t0)*i/4;g+=`<text class="ax" x="${x(t)}" y="${H-6}" text-anchor="${i==0?'start':i==4?'end':'middle'}">${tf(t)}</text>`}
+  if(o.guide!=null)g+=`<line class="gd" x1="${L}" x2="${W-R}" y1="${y(o.guide)}" y2="${y(o.guide)}"/>`;
+  const gap=Math.max(60,o.span/240)*2.5;let d='',prev=null,a='';
+  pts.forEach(p=>{const cx=x(p[0]).toFixed(1),cy=y(p[1]).toFixed(1);d+=(prev==null||p[0]-prev>gap?'M':'L')+cx+' '+cy+' ';prev=p[0]});
+  if(pts.length>1)a=`<path class="ar" d="M${x(pts[0][0])} ${H-B} ${d.replace(/M/g,'L')} L${x(pts[pts.length-1][0])} ${H-B}Z"/>`;
+  const dots=pts.length<4?pts.map(p=>`<circle cx="${x(p[0])}" cy="${y(p[1])}" r="3.5" fill="var(--water)"/>`).join(''):'';
+  host.innerHTML=`<svg class="ch" viewBox="0 0 ${W} ${H}">${g}${a}<path class="ln" d="${d}"/>${dots}<line class="cross" y1="${T}" y2="${H-B}"/></svg>`;
+  const svg=host.querySelector('svg'),cr=svg.querySelector('.cross');
+  const leave=()=>{cr.style.display='none';tip.style.display='none'};
+  svg.onpointerleave=leave;svg.onpointermove=e=>{
+    const r=svg.getBoundingClientRect(),px=(e.clientX-r.left)/r.width*W;if(px<L||px>W-R)return leave();
+    const t=t0+(px-L)/(W-L-R)*(t1-t0);let b=pts[0];for(const p of pts)if(Math.abs(p[0]-t)<Math.abs(b[0]-t))b=p;
+    cr.setAttribute('x1',x(b[0]));cr.setAttribute('x2',x(b[0]));cr.style.display='block';
+    tip.textContent=`${fmt(b[1])}${o.unit||''}  ${new Date(b[0]*1000).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}`;
+    tip.style.display='block';tip.style.left=Math.min(e.clientX+12,innerWidth-190)+'px';tip.style.top=(e.clientY-34)+'px';
+  };
+}
+async function renderCharts(items){
+  const keys=[...new Set(items.flatMap(i=>i.keys))];let h={};
+  try{h=await(await fetch(`/api/history?range=${RANGE}&keys=${encodeURIComponent(keys.join(','))}`)).json()}catch(e){}
+  items.forEach(i=>{if(!document.body.contains(i.host))return;const m=i.make(h);drawChart(i.host,m.pts,{...m.o,span:RS[RANGE]})});
+}
+const rangeSeg=()=>`<div class="seg">${Object.keys(RS).map(r=>`<button data-r="${r}" class="${r===RANGE?'on':''}">${RN[r]}</button>`).join('')}</div>`;
+const chartBox=(title,id,extra='')=>`<div class="cc" ${id}><div class="cch"><b>${title}</b><span ${extra}></span></div><div class="chh"></div></div>`;
+const plantItem=(p,host,raw)=>{const k=`c:${p.channel}:${raw||'raw'}`;return{host,keys:[k],make:h=>({pts:(h[k]||[]).map(([t,v])=>[t,raw?v:pctOf(v,p)]).filter(q=>q[1]!=null),o:raw?{unit:raw==='volts'?' V':''}:{min:0,max:100,unit:'%',guide:80}})}};
+const NODE_CH=[['temperature_c','Temperature','\u00b0C'],['humidity_pct','Humidity','%'],['dew_point_c','Dew point','\u00b0C'],['cpu_temp_c','CPU temperature','\u00b0C'],['wifi_rssi_dbm','Wi-Fi signal',' dBm'],['free_mem_b','Free memory',' KB',1/1024],['collect_ms','Sensor read time',' ms']];
+const nodeItem=(n,host)=>{const k='n:'+n[0],s=n[3]||1;return{host,keys:[k],make:h=>({pts:(h[k]||[]).map(([t,v])=>[t,v*s]),o:{unit:n[2]}})}};
+
+/* ---------- modal ---------- */
+function modal(html,ctx){$('#sheet').innerHTML=html;$('#modal').hidden=false;MC=ctx||null;clearInterval(mTimer);if(MC&&MC.load){MC.load();mTimer=setInterval(MC.load,30000)}}
+function closeModal(){$('#modal').hidden=true;MC=null;clearInterval(mTimer);$('#sheet').innerHTML=''}
+
+function openPlant(id){
+  const p=S.plants.find(x=>x.id===id);if(!p)return;
+  modal(`<div class="mh"><div><h2>${esc(p.name)}</h2><div class="sub">${shelfName(p.shelf)}, sensor ${esc(p.channel)}</div></div>
+    <div class="mr"><span class="big" id="mBig">--</span>${rangeSeg()}<button class="btn" id="mEdit">Edit</button><button class="btn icon" data-close>&#10005;</button></div></div>
+    <div class="cgrid2">${chartBox('Soil moisture','')}${chartBox('Raw ADC','')}${chartBox('Sensor voltage','')}</div>`,
+    {plant:id,load:()=>{const b=[...document.querySelectorAll('#sheet .chh')];renderCharts([plantItem(p,b[0]),plantItem(p,b[1],'raw'),plantItem(p,b[2],'volts')])}});
+  $('#mEdit').onclick=()=>plantForm(p);updateLive();
+}
+
+function openNodeDetail(){
+  const d=S.node||{},st=d.stats||{};
+  const fact=(a,b)=>`<div>${a}<b>${esc(b==null?'--':b)}</b></div>`;
+  modal(`<div class="mh"><div><h2>${esc(d.node_id||'Sensor node')}</h2><div class="sub">${esc(S.node_url)}</div></div><div class="mr">${rangeSeg()}<button class="btn icon" data-close>&#10005;</button></div></div>
+    <div class="facts">${fact('Firmware',d.fw)}${fact('IP address',d.ip)}${fact('Uptime',d.uptime_s!=null?fmtUp(d.uptime_s):null)}${fact('Reset cause',d.reset_cause)}${fact('Requests served',st.requests)}${fact('Wi-Fi connects',st.wifi_connects)}${fact('Humidity sensor errors',st.aht_errors)}${fact('Sensors reporting',d.channels?Object.keys(d.channels).length:null)}</div>
+    <div class="cgrid2">${NODE_CH.map(n=>chartBox(n[1],'')).join('')}</div>`,
+    {load:()=>{const b=[...document.querySelectorAll('#sheet .chh')];renderCharts(NODE_CH.map((n,i)=>nodeItem(n,b[i])))}});
+}
+
+function openNodeSettings(){
+  modal(`<div class="mh"><h2>Node connection</h2><button class="btn icon" data-close>&#10005;</button></div><div class="form">
+    <label>Node address<input id="nUrl" value="${esc(S?S.node_url:'')}" placeholder="192.168.1.173 or 192.168.1.173:8080"></label>
+    <p class="sub">The node must answer an HTTP GET with its JSON readings. If it isn't served at the root, add the path, for example 192.168.1.173/data.</p>
+    <div class="sub" id="nRes"></div>
+    <div class="actions"><span class="sp"></span><button class="btn" data-close>Cancel</button><button class="btn primary" id="nSave">Save and test</button></div></div>`);
+  $('#nSave').onclick=async()=>{
+    $('#nRes').textContent='Testing...';
+    const r=await(await fetch('/api/node',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:$('#nUrl').value})})).json();
+    $('#nRes').textContent=r.message||r.error;$('#nRes').style.color=r.ok?'var(--good)':'var(--dry)';
+    tick();if(r.ok)setTimeout(closeModal,1200);
+  };
+}
+
+function plantForm(p){
+  const edit=!!p,free=S.unassigned.slice();if(edit&&!free.includes(p.channel))free.unshift(p.channel);
+  const c=p||{name:'',channel:free[0]||'',shelf:'top',pos:'',adc20:'',adc80:''};
+  modal(`<div class="mh"><h2>${edit?'Edit plant':'Add plant'}</h2><button class="btn icon" data-close>&#10005;</button></div><div class="form">
+    <label>Name<input id="fName" maxlength="40" value="${esc(c.name)}" placeholder="Basil"></label>
+    <label>Sensor<select id="fCh">${free.map(x=>`<option value="${esc(x)}" ${x===c.channel?'selected':''}>Sensor ${esc(x)}</option>`).join('')||'<option value="">No unassigned sensors</option>'}</select></label>
+    <div class="row2"><label>Shelf<select id="fShelf"><option value="top" ${c.shelf==='top'?'selected':''}>Top shelf</option><option value="lower" ${c.shelf==='lower'?'selected':''}>Lower shelf</option></select></label>
+    <label>Order on shelf<input id="fPos" type="number" min="1" value="${c.pos}" placeholder="Last"></label></div>
+    <div class="calib"><div class="lv">Live raw reading <b id="liveRaw">--</b></div>
+      <label>Raw value at 20% moisture<span class="inl"><input id="f20" type="number" step="any" value="${c.adc20}" placeholder="e.g. 8000"><button class="btn" data-use="f20">Use live</button></span></label>
+      <label>Raw value at 80% moisture<span class="inl"><input id="f80" type="number" step="any" value="${c.adc80}" placeholder="e.g. 16000"><button class="btn" data-use="f80">Use live</button></span></label>
+      <div class="sub">Moisture is a straight line through these two points, so 0% and 100% follow from them. Sensor voltage rises with moisture on this node, so read 20% with the probe in dry soil and 80% in nicely moist soil.</div></div>
+    <div class="err" id="fErr"></div>
+    <div class="actions">${edit?'<button class="btn danger" id="fDel">Delete</button>':''}<span class="sp"></span><button class="btn" data-close>Cancel</button><button class="btn primary" id="fSave">Save</button></div></div>`);
+  $('#fCh').onchange=updateLive;updateLive();
+  $('#fSave').onclick=async()=>{
+    const body={name:$('#fName').value,channel:$('#fCh').value,shelf:$('#fShelf').value,pos:$('#fPos').value,adc20:$('#f20').value,adc80:$('#f80').value};
+    const r=await fetch(edit?`/api/plants/${p.id}`:'/api/plants',{method:edit?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(r.ok){closeModal();tick()}else $('#fErr').textContent=(await r.json()).error;
+  };
+  if(edit)$('#fDel').onclick=async e=>{
+    if(e.target.dataset.sure!=='1'){e.target.dataset.sure='1';e.target.textContent='Tap again to delete';return}
+    await fetch(`/api/plants/${p.id}`,{method:'DELETE'});closeModal();tick();
+  };
+}
+
+/* ---------- advanced view ---------- */
+function loadAdv(){
+  const adv=$('#adv'),P=S.plants;
+  const sig=JSON.stringify(P.map(p=>[p.id,p.name,p.channel]));
+  if(adv.dataset.sig!==sig||!adv.firstChild){adv.dataset.sig=sig;
+    adv.innerHTML=`<div class="advbar"><h2>Graphs</h2>${rangeSeg()}</div><h3>Soil moisture</h3><div class="cgrid3">${P.map(p=>chartBox(esc(p.name),`data-plant="${p.id}"`,`data-live="${p.id}"`)).join('')||'<div class="sub">No plants yet.</div>'}</div>
+    <h3>Node telemetry</h3><div class="cgrid3">${NODE_CH.map(n=>chartBox(n[1],'data-node="1"')).join('')}</div>`;updateLive()}
+  const pb=[...adv.querySelectorAll('[data-plant] .chh')],nb=[...adv.querySelectorAll('[data-node] .chh')];
+  renderCharts([...P.map((p,i)=>plantItem(p,pb[i])),...NODE_CH.map((n,i)=>nodeItem(n,nb[i]))]);
+}
+function showView(){
+  $('#dash').hidden=ADV;$('#adv').hidden=!ADV;$('#advBtn').textContent=ADV?'Dashboard':'Advanced';
+  clearInterval(advTimer);if(ADV&&S){loadAdv();advTimer=setInterval(loadAdv,30000)}
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{
+  const t=e.target;
+  if(t.closest('[data-close]')||t.id==='modal')return closeModal();
+  const m=t.closest('#modeSeg [data-m]');if(m){MODE=m.dataset.m;localStorage.mode=MODE;return applyTheme()}
+  const r=t.closest('[data-r]');if(r){RANGE=r.dataset.r;localStorage.range=RANGE;document.querySelectorAll('[data-r]').forEach(b=>b.classList.toggle('on',b.dataset.r===RANGE));if(MC&&MC.load)MC.load();if(ADV)loadAdv();return}
+  const u=t.closest('[data-use]');if(u){const o=S.node&&S.node.channels&&S.node.channels[$('#fCh').value];if(o)$('#'+u.dataset.use).value=Math.round(o.raw);return}
+  const tile=t.closest('.tile');if(tile)return openPlant(+tile.dataset.id);
+  const cc=t.closest('#adv .cc');if(cc)return cc.dataset.plant?openPlant(+cc.dataset.plant):openNodeDetail();
+  if(t.closest('#nodeCard'))return openNodeDetail();
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+$('#advBtn').onclick=()=>{ADV=!ADV;localStorage.adv=ADV?'1':'0';showView()};
+$('#addBtn').onclick=()=>plantForm();
+$('#setBtn').onclick=openNodeSettings;
+
+clock();setInterval(clock,250);
+tick().then(()=>{showView();if(S&&!S.node_url)openNodeSettings()});
+setInterval(tick,1000);
+</script>
+</body>
+</html>
