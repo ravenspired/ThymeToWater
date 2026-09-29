@@ -1,15 +1,5 @@
 {
   "node_url": "http://192.168.1.171",
-  "plants": [
-    {
-      "name": "Basil",
-      "channel": "1",
-      "shelf": "top",
-      "pos": 1,
-      "adc20": 400.0,
-      "adc80": 20000.0,
-      "id": 1
-    }
-  ],
-  "next_id": 2
+  "plants": [],
+  "next_id": 1
 }

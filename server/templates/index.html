@@ -2,7 +2,7 @@
 <html lang="en" data-theme="day">
 <head>
 <meta charset="utf-8">
-<title>Plant shelf</title>
+<title>ThymeToWater</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <style>
@@ -29,6 +29,7 @@ h1,h2,h3,p{margin:0}
 .seg{display:inline-flex;background:var(--btn);border-radius:12px;padding:3px}
 .seg button{border:0;background:transparent;padding:7px 13px;border-radius:9px;cursor:pointer;font-weight:600;font-size:14px;color:var(--mut)}
 .seg button.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px var(--shade)}
+.form .seg{align-self:flex-start}
 main{flex:1;min-height:0;padding:0 24px 24px}
 .dash{display:grid;grid-template-columns:1fr 300px;gap:20px;height:100%}
 .shelves{display:flex;flex-direction:column;gap:18px;overflow:auto;min-height:0;padding-right:2px}
@@ -90,13 +91,13 @@ svg.ch{width:100%;height:auto;display:block;touch-action:pan-y}
 </head>
 <body>
 <header class="top">
-  <div class="brand"><span class="mark"></span><h1>Plant shelf</h1></div>
+  <div class="brand"><span class="mark"></span><h1>ThymeToWater</h1></div>
   <div class="clock"><div id="time">--:--:--</div><div id="date"></div></div>
   <div class="tools">
     <div class="seg" id="modeSeg"><button data-m="auto">Auto</button><button data-m="day">Day</button><button data-m="night">Night</button></div>
     <button class="btn" id="advBtn">Advanced</button>
     <button class="btn primary" id="addBtn">Add plant</button>
-    <button class="btn icon" id="setBtn" title="Node connection">&#9881;</button>
+    <button class="btn icon" id="setBtn" title="Settings">&#9881;</button>
   </div>
 </header>
 <main>
@@ -111,6 +112,9 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const RS={'1h':3600,'24h':86400,'7d':604800,'30d':2592000},RN={'1h':'Hour','24h':'Day','7d':'Week','30d':'Month'};
 let S=null,MODE=localStorage.mode||'auto',RANGE=localStorage.range||'24h',ADV=localStorage.adv==='1',MC=null,mTimer=null,advTimer=null;
+let UNIT=localStorage.unit==='C'?'C':'F',OFFSET=0,wT=null;
+const MAXBACK=365*86400;
+const T24={hour:'2-digit',minute:'2-digit',hourCycle:'h23'};   // 24h, no am/pm
 
 /* ---------- theme + clock ---------- */
 function applyTheme(){
@@ -120,7 +124,7 @@ function applyTheme(){
 }
 function clock(){
   const d=new Date();
-  $('#time').textContent=d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',second:'2-digit'});
+  $('#time').textContent=d.toLocaleTimeString([],{...T24,second:'2-digit'});
   $('#date').textContent=d.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});
   applyTheme();
 }
@@ -130,6 +134,12 @@ const pctOf=(raw,p)=>(raw==null||p.adc80===p.adc20)?null:Math.max(0,Math.min(100
 const stOf=p=>p==null?'none':p<30?'dry':p<65?'low':p<=92?'good':'wet';
 const STX={dry:'Dry',low:'Getting dry',good:'Good',wet:'Too wet',none:'No reading'};
 const F=c=>c*9/5+32;
+const tc=v=>UNIT==='F'?F(v):v;
+function absHum(t,rh){            // g of water vapor per m³
+  if(t==null||rh==null)return null;
+  const e=rh/100*6.112*Math.exp(17.62*t/(243.12+t));   // hPa
+  return 216.7*e/(273.15+t);
+}
 const fmt=v=>Math.abs(v)>=1000?v.toFixed(0):v.toFixed(1);
 const fmtUp=s=>{s=Math.floor(s);const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);return d?`${d}d ${h}h`:h?`${h}h ${m}m`:`${m}m ${s%60}s`};
 const fmtAge=s=>s<60?`${Math.floor(s)}s ago`:s<3600?`${Math.floor(s/60)}m ago`:`${Math.floor(s/3600)}h ago`;
@@ -168,16 +178,20 @@ function renderSide(){
   const side=$('#side');
   if(!side.dataset.built){side.dataset.built=1;side.innerHTML=`
   <div class="card"><div class="cl">Room air</div>
-    <div class="temp"><span id="tF">--</span><small>&deg;F</small></div><div class="sub"><span id="tC">--</span> &deg;C</div>
-    <div class="hum"><div class="hl">Humidity</div><div class="hv"><span id="hum">--</span><small>%</small></div><div class="bar"><i id="humBar" style="width:0"></i></div></div>
+    <div class="temp"><span id="tV">--</span><small id="tU"></small></div>
+    <div class="hum"><div class="hl">Humidity</div><div class="hv"><span id="hum">--</span><small>%</small></div><div class="bar"><i id="humBar" style="width:0"></i></div>
+      <div class="sub" style="margin-top:8px">Water in air <b id="absV">--</b> <span id="absU"></span></div></div>
     <div class="sub">Dew point <span id="dew">--</span></div></div>
   <button class="card node" id="nodeCard"><div class="nh"><span class="dot" id="dot"></span><b id="nid">Sensor node</b><span id="nstat"></span></div>
     <dl><dt>Wi-Fi</dt><dd id="rssi">--</dd><dt>Uptime</dt><dd id="up">--</dd><dt>Last update</dt><dd id="age">--</dd><dt>Sensors</dt><dd id="chs">--</dd></dl>
     <div class="err" id="nerr"></div><div class="hint">Tap for node telemetry</div></button>`}
   const d=S.node||{},t=d.temperature_c,h=d.humidity_pct,dp=d.dew_point_c;
-  $('#tF').textContent=t==null?'--':F(t).toFixed(1);$('#tC').textContent=t==null?'--':t.toFixed(1);
+  $('#tV').textContent=t==null?'--':tc(t).toFixed(1);$('#tU').innerHTML='&deg;'+UNIT;
   $('#hum').textContent=h==null?'--':h.toFixed(1);$('#humBar').style.width=(h||0)+'%';
-  $('#dew').textContent=dp==null?'--':`${F(dp).toFixed(1)}\u00b0F`;
+  $('#dew').textContent=dp==null?'--':`${tc(dp).toFixed(1)}\u00b0${UNIT}`;
+  const ab=absHum(t,h);
+  $('#absV').textContent=ab==null?'--':(UNIT==='F'?ab*0.00095748:ab/1000).toFixed(4);   // fl oz/ft³ or g/L
+  $('#absU').textContent=UNIT==='F'?'fl oz / ft\u00b3':'g / L';
   $('#dot').className='dot '+(!S.node_url?'':S.connected?'on':'bad');
   $('#nstat').textContent=!S.node_url?'Not connected':S.connected?'Online':'Offline';
   $('#nid').textContent=d.node_id||'Sensor node';
@@ -198,12 +212,13 @@ function updateLive(){
 /* ---------- charts ---------- */
 const tip=$('#tip');
 function drawChart(host,pts,o){
+  host.onwheel=onWheel;
   if(!pts.length){host.innerHTML='<div class="nodata">No data in this range yet</div>';return}
-  const W=640,H=190,L=46,R=10,T=10,B=24,now=Date.now()/1000,t0=now-o.span,t1=now;
+  const W=640,H=190,L=46,R=10,T=10,B=24,t1=o.end,t0=t1-o.span;
   const vs=pts.map(p=>p[1]);let lo=o.min!=null?o.min:Math.min(...vs),hi=o.max!=null?o.max:Math.max(...vs);
   if(o.min==null||o.max==null){if(hi===lo){hi+=1;lo-=1}const pad=(hi-lo)*.1;if(o.min==null)lo-=pad;if(o.max==null)hi+=pad}
   const x=t=>L+(t-t0)/(t1-t0)*(W-L-R),y=v=>T+(1-(v-lo)/(hi-lo))*(H-T-B);
-  const tf=t=>{const d=new Date(t*1000);return o.span<=86400?d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):d.toLocaleDateString([],{month:'short',day:'numeric'})};
+  const tf=t=>{const d=new Date(t*1000);return o.span<=86400?d.toLocaleTimeString([],T24):d.toLocaleDateString([],{month:'short',day:'numeric'})};
   let g='';
   for(let i=0;i<=4;i++){const v=lo+(hi-lo)*i/4,yy=y(v);g+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}"/><text class="ax" x="${L-6}" y="${yy+4}" text-anchor="end">${fmt(v)}</text>`}
   for(let i=0;i<=4;i++){const t=t0+(t1-t0)*i/4;g+=`<text class="ax" x="${x(t)}" y="${H-6}" text-anchor="${i==0?'start':i==4?'end':'middle'}">${tf(t)}</text>`}
@@ -219,26 +234,37 @@ function drawChart(host,pts,o){
     const r=svg.getBoundingClientRect(),px=(e.clientX-r.left)/r.width*W;if(px<L||px>W-R)return leave();
     const t=t0+(px-L)/(W-L-R)*(t1-t0);let b=pts[0];for(const p of pts)if(Math.abs(p[0]-t)<Math.abs(b[0]-t))b=p;
     cr.setAttribute('x1',x(b[0]));cr.setAttribute('x2',x(b[0]));cr.style.display='block';
-    tip.textContent=`${fmt(b[1])}${o.unit||''}  ${new Date(b[0]*1000).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}`;
+    tip.textContent=`${fmt(b[1])}${o.unit||''}  ${new Date(b[0]*1000).toLocaleString([],{month:'short',day:'numeric',...T24})}`;
     tip.style.display='block';tip.style.left=Math.min(e.clientX+12,innerWidth-190)+'px';tip.style.top=(e.clientY-34)+'px';
   };
 }
-async function renderCharts(items){
-  const keys=[...new Set(items.flatMap(i=>i.keys))];let h={};
-  try{h=await(await fetch(`/api/history?range=${RANGE}&keys=${encodeURIComponent(keys.join(','))}`)).json()}catch(e){}
-  items.forEach(i=>{if(!document.body.contains(i.host))return;const m=i.make(h);drawChart(i.host,m.pts,{...m.o,span:RS[RANGE]})});
+function onWheel(e){
+  if(RANGE==='30d')return;                       // 30d: normal page scroll
+  e.preventDefault();
+  const raw=Math.abs(e.deltaX)>Math.abs(e.deltaY)?-e.deltaX:-e.deltaY;   // wheel up / swipe left = back in time
+  const d=raw*(e.deltaMode===1?33:1);
+  OFFSET=Math.max(0,Math.min(MAXBACK,OFFSET+RS[RANGE]*d/1000));          // one 100px notch = 10% of the window
+  updateNow();
+  clearTimeout(wT);wT=setTimeout(()=>{MC&&MC.load?MC.load():ADV&&loadAdv()},120);
 }
-const rangeSeg=()=>`<div class="seg">${Object.keys(RS).map(r=>`<button data-r="${r}" class="${r===RANGE?'on':''}">${RN[r]}</button>`).join('')}</div>`;
+async function renderCharts(items){
+  const end=Math.floor(Date.now()/1000-OFFSET);
+  const keys=[...new Set(items.flatMap(i=>i.keys))];let h={};
+  try{h=await(await fetch(`/api/history?range=${RANGE}&end=${end}&keys=${encodeURIComponent(keys.join(','))}`)).json()}catch(e){}
+  items.forEach(i=>{if(!document.body.contains(i.host))return;const m=i.make(h);drawChart(i.host,m.pts,{...m.o,span:RS[RANGE],end})});
+}
+const rangeSeg=()=>`<span class="mr"><button class="btn" data-now ${OFFSET?'':'hidden'}>Back to now</button><div class="seg">${Object.keys(RS).map(r=>`<button data-r="${r}" class="${r===RANGE?'on':''}">${RN[r]}</button>`).join('')}</div></span>`;
 const chartBox=(title,id,extra='')=>`<div class="cc" ${id}><div class="cch"><b>${title}</b><span ${extra}></span></div><div class="chh"></div></div>`;
 const plantItem=(p,host,raw)=>{const k=`c:${p.channel}:${raw||'raw'}`;return{host,keys:[k],make:h=>({pts:(h[k]||[]).map(([t,v])=>[t,raw?v:pctOf(v,p)]).filter(q=>q[1]!=null),o:raw?{unit:raw==='volts'?' V':''}:{min:0,max:100,unit:'%',guide:80}})}};
-const NODE_CH=[['temperature_c','Temperature','\u00b0C'],['humidity_pct','Humidity','%'],['dew_point_c','Dew point','\u00b0C'],['cpu_temp_c','CPU temperature','\u00b0C'],['wifi_rssi_dbm','Wi-Fi signal',' dBm'],['free_mem_b','Free memory',' KB',1/1024],['collect_ms','Sensor read time',' ms']];
-const nodeItem=(n,host)=>{const k='n:'+n[0],s=n[3]||1;return{host,keys:[k],make:h=>({pts:(h[k]||[]).map(([t,v])=>[t,v*s]),o:{unit:n[2]}})}};
+const NODE_CH=[['temperature_c','Temperature','C',1,'t'],['humidity_pct','Humidity','%'],['dew_point_c','Dew point','C',1,'t'],['cpu_temp_c','CPU temperature','C',1,'t'],['wifi_rssi_dbm','Wi-Fi signal',' dBm'],['free_mem_b','Free memory',' KB',1/1024],['collect_ms','Sensor read time',' ms']];
+const nodeItem=(n,host)=>{const k='n:'+n[0],s=n[3]||1,T=n[4]==='t';return{host,keys:[k],make:h=>({pts:(h[k]||[]).map(([t,v])=>[t,T?tc(v):v*s]),o:{unit:T?'\u00b0'+UNIT:n[2]}})}};
 
 /* ---------- modal ---------- */
 function modal(html,ctx){$('#sheet').innerHTML=html;$('#modal').hidden=false;MC=ctx||null;clearInterval(mTimer);if(MC&&MC.load){MC.load();mTimer=setInterval(MC.load,30000)}}
 function closeModal(){$('#modal').hidden=true;MC=null;clearInterval(mTimer);$('#sheet').innerHTML=''}
 
 function openPlant(id){
+  resetOffset();
   const p=S.plants.find(x=>x.id===id);if(!p)return;
   modal(`<div class="mh"><div><h2>${esc(p.name)}</h2><div class="sub">${shelfName(p.shelf)}, sensor ${esc(p.channel)}</div></div>
     <div class="mr"><span class="big" id="mBig">--</span>${rangeSeg()}<button class="btn" id="mEdit">Edit</button><button class="btn icon" data-close>&#10005;</button></div></div>
@@ -248,6 +274,7 @@ function openPlant(id){
 }
 
 function openNodeDetail(){
+  resetOffset();
   const d=S.node||{},st=d.stats||{};
   const fact=(a,b)=>`<div>${a}<b>${esc(b==null?'--':b)}</b></div>`;
   modal(`<div class="mh"><div><h2>${esc(d.node_id||'Sensor node')}</h2><div class="sub">${esc(S.node_url)}</div></div><div class="mr">${rangeSeg()}<button class="btn icon" data-close>&#10005;</button></div></div>
@@ -257,11 +284,13 @@ function openNodeDetail(){
 }
 
 function openNodeSettings(){
-  modal(`<div class="mh"><h2>Node connection</h2><button class="btn icon" data-close>&#10005;</button></div><div class="form">
+  modal(`<div class="mh"><h2>Settings</h2><button class="btn icon" data-close>&#10005;</button></div><div class="form">
+    <label>Temperature unit<span class="seg" id="unitSeg"><button data-u="F">&deg;F</button><button data-u="C">&deg;C</button></span></label>
     <label>Node address<input id="nUrl" value="${esc(S?S.node_url:'')}" placeholder="192.168.1.173 or 192.168.1.173:8080"></label>
     <p class="sub">The node must answer an HTTP GET with its JSON readings. If it isn't served at the root, add the path, for example 192.168.1.173/data.</p>
     <div class="sub" id="nRes"></div>
     <div class="actions"><span class="sp"></span><button class="btn" data-close>Cancel</button><button class="btn primary" id="nSave">Save and test</button></div></div>`);
+  markUnit();
   $('#nSave').onclick=async()=>{
     $('#nRes').textContent='Testing...';
     const r=await(await fetch('/api/node',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:$('#nUrl').value})})).json();
@@ -312,11 +341,16 @@ function showView(){
 }
 
 /* ---------- events ---------- */
+function markUnit(){document.querySelectorAll('#unitSeg button').forEach(b=>b.classList.toggle('on',b.dataset.u===UNIT))}
+function updateNow(){document.querySelectorAll('[data-now]').forEach(b=>b.hidden=!OFFSET)}
+function resetOffset(){OFFSET=0;updateNow()}
 document.addEventListener('click',e=>{
   const t=e.target;
+  const un=t.closest('[data-u]');if(un){UNIT=un.dataset.u;localStorage.unit=UNIT;markUnit();renderSide();if(ADV)loadAdv();return}
   if(t.closest('[data-close]')||t.id==='modal')return closeModal();
   const m=t.closest('#modeSeg [data-m]');if(m){MODE=m.dataset.m;localStorage.mode=MODE;return applyTheme()}
-  const r=t.closest('[data-r]');if(r){RANGE=r.dataset.r;localStorage.range=RANGE;document.querySelectorAll('[data-r]').forEach(b=>b.classList.toggle('on',b.dataset.r===RANGE));if(MC&&MC.load)MC.load();if(ADV)loadAdv();return}
+  const nw=t.closest('[data-now]');if(nw){resetOffset();if(MC&&MC.load)MC.load();else if(ADV)loadAdv();return}
+  const r=t.closest('[data-r]');if(r){RANGE=r.dataset.r;localStorage.range=RANGE;resetOffset();document.querySelectorAll('[data-r]').forEach(b=>b.classList.toggle('on',b.dataset.r===RANGE));if(MC&&MC.load)MC.load();if(ADV)loadAdv();return}
   const u=t.closest('[data-use]');if(u){const o=S.node&&S.node.channels&&S.node.channels[$('#fCh').value];if(o)$('#'+u.dataset.use).value=Math.round(o.raw);return}
   const tile=t.closest('.tile');if(tile)return openPlant(+tile.dataset.id);
   const cc=t.closest('#adv .cc');if(cc)return cc.dataset.plant?openPlant(+cc.dataset.plant):openNodeDetail();

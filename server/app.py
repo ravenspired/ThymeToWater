@@ -245,12 +245,17 @@ def api_del_plant(pid):
 def api_history():
     span = RANGES.get(request.args.get("range", "24h"), 86400)
     keys = [k for k in request.args.get("keys", "").split(",") if k][:60]
+    now = int(time.time())
+    try:
+        end = min(int(float(request.args.get("end", ""))), now)
+    except (ValueError, OverflowError):
+        end = now
     bucket = max(60, span // 240)
-    since = int(time.time()) - span
+    since = end - span
     out = {}
     for k in keys:
-        rows = db_run("SELECT (ts/?)*? AS b, AVG(v) FROM samples WHERE k=? AND ts>=? GROUP BY b ORDER BY b",
-                      (bucket, bucket, k, since))
+        rows = db_run("SELECT (ts/?)*? AS b, AVG(v) FROM samples WHERE k=? AND ts>=? AND ts<=? GROUP BY b ORDER BY b",
+                      (bucket, bucket, k, since, end))
         out[k] = [[b + bucket // 2, v] for b, v in rows]
     return jsonify(out)
 
